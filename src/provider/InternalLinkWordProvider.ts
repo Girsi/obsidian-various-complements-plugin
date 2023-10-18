@@ -16,6 +16,7 @@ export class InternalLinkWordProvider {
     makeSynonymAboutEmoji: boolean;
     makeSynonymAboutAccentsDiacritics: boolean;
     frontMatterKeyForExclusion: string;
+    suffixesToAccept: string[];
   }): void {
     this.clearWords();
 
@@ -42,51 +43,63 @@ export class InternalLinkWordProvider {
 
         if (option.wordAsInternalLinkAlias) {
           return [
-            {
-              value: x.basename,
+            ...option.suffixesToAccept.map((suffix) => ({
+              value: `${x.basename}${suffix}`,
               type: "internalLink",
               createdPath: x.path,
               aliases: synonymAliases(x.basename, {
                 emoji: option.makeSynonymAboutEmoji,
                 accentsDiacritics: option.makeSynonymAboutAccentsDiacritics,
+                suffix,
               }),
               description: x.path,
-            },
-            ...aliases.map((a) => ({
-              value: a,
-              type: "internalLink",
-              createdPath: x.path,
-              aliases: synonymAliases(a, {
-                emoji: option.makeSynonymAboutEmoji,
-                accentsDiacritics: option.makeSynonymAboutAccentsDiacritics,
-              }),
-              description: x.path,
-              aliasMeta: {
+              aliasMeta: suffix ? {
                 origin: x.path,
-              },
+              } : undefined,
             })),
+            ...aliases.flatMap((alias) => (
+              option.suffixesToAccept.map((suffix) => ({
+                value: `${alias}${suffix}`,
+                type: "internalLink",
+                createdPath: x.path,
+                aliases: synonymAliases(alias, {
+                  emoji: option.makeSynonymAboutEmoji,
+                  accentsDiacritics: option.makeSynonymAboutAccentsDiacritics,
+                  suffix,
+                }),
+                description: x.path,
+                aliasMeta: {
+                  origin: x.path,
+                },
+                }))
+              )),
           ] as InternalLinkWord[];
         } else {
           return [
-            {
-              value: x.basename,
+            ...option.suffixesToAccept.map((suffix) => ({
+              value: `${x.basename}${suffix}`,
               type: "internalLink",
               createdPath: x.path,
               aliases: [
                 ...synonymAliases(x.basename, {
                   emoji: option.makeSynonymAboutEmoji,
                   accentsDiacritics: option.makeSynonymAboutAccentsDiacritics,
+                  suffix,
                 }),
                 ...aliases,
                 ...aliases.flatMap((al) =>
                   synonymAliases(al, {
                     emoji: option.makeSynonymAboutEmoji,
                     accentsDiacritics: option.makeSynonymAboutAccentsDiacritics,
+                    suffix,
                   })
                 ),
               ],
               description: x.path,
-            },
+              aliasMeta: suffix ? {
+                origin: x.path,
+              } : undefined,
+            })),
           ] as InternalLinkWord[];
         }
       });

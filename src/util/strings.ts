@@ -35,9 +35,13 @@ export function normalizeAccentsDiacritics(text: string): string {
 
 export function synonymAliases(
   value: string,
-  option: { emoji: boolean; accentsDiacritics: boolean }
+  option: { emoji: boolean; accentsDiacritics: boolean; suffix?: string }
 ): string[] {
   let synonym = value;
+
+  if (option.suffix) {
+    synonym = `${synonym}${option.suffix}`;
+  }
 
   if (option.emoji) {
     synonym = excludeEmoji(synonym);
@@ -99,6 +103,10 @@ export function isInternalLink(text: string): boolean {
 
 export function smartLineBreakSplit(text: string): string[] {
   return text.split("\n").filter((x) => x);
+}
+
+export function smartLineBreakJoin(lines: string[]): string {
+  return lines.filter((x) => x).join("\n");
 }
 
 export function* splitRaw(

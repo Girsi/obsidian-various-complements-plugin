@@ -7,7 +7,7 @@ import { mirrorMap } from "../util/collection-helper";
 import { DescriptionOnSuggestion } from "../option/DescriptionOnSuggestion";
 import { SpecificMatchStrategy } from "../provider/SpecificMatchStrategy";
 import type { SelectionHistoryTree } from "../storage/SelectionHistoryStorage";
-import { smartLineBreakSplit } from "../util/strings";
+import { smartLineBreakJoin, smartLineBreakSplit } from "../util/strings";
 import { TextComponentEvent } from "./settings-helper";
 import { DEFAULT_HISTORIES_PATH } from "../util/path";
 import type { Hotkey } from "../keys";
@@ -96,6 +96,7 @@ export interface Settings {
     after: string;
   };
   frontMatterKeyForExclusionInternalLink: string;
+  suffixesToAcceptForInternalLinks: string[];
 
   // front matter complement
   enableFrontMatterComplement: boolean;
@@ -204,6 +205,7 @@ export const DEFAULT_SETTINGS: Settings = {
     after: "",
   },
   frontMatterKeyForExclusionInternalLink: "",
+  suffixesToAcceptForInternalLinks: [""],
 
   // front matter complement
   enableFrontMatterComplement: true,
@@ -1062,6 +1064,26 @@ export class VariousComplementsSettingTab extends PluginSettingTab {
             this.plugin.settings.frontMatterKeyForExclusionInternalLink
           );
         });
+      
+      new Setting(containerEl)
+      .setName("Suffixes to consider for internal links")
+      .setDesc(
+        "Suggestions for internal links will include suffixed versions of the links as well."
+      )
+      .addTextArea((tc) => {
+        const el = tc
+          .setValue(
+            smartLineBreakJoin(this.plugin.settings.suffixesToAcceptForInternalLinks)
+          )
+          .onChange(async (value) => {
+            this.plugin.settings.suffixesToAcceptForInternalLinks =
+              ["", ...smartLineBreakSplit(value)];
+            await this.plugin.saveSettings({ internalLink: true });
+          });
+        el.inputEl.className =
+          "various-complements__settings__text-area-path-dense";
+        return el;
+      });
     }
   }
 

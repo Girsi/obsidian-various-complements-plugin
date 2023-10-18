@@ -18,6 +18,8 @@ import {
   startsSmallLetterOnlyFirst,
   synonymAliases,
   isInternalLink,
+  smartLineBreakSplit,
+  smartLineBreakJoin,
 } from "./strings";
 
 describe.each<{ one: string; another: string; expected: boolean }>`
@@ -226,28 +228,45 @@ describe.each<{
   value: Parameters<typeof synonymAliases>[0];
   emoji: Parameters<typeof synonymAliases>[1]["emoji"];
   accentsDiacritics: Parameters<typeof synonymAliases>[1]["accentsDiacritics"];
+  suffix: Parameters<typeof synonymAliases>[1]["suffix"];
   expected: ReturnType<typeof synonymAliases>;
 }>`
-  value      | emoji    | accentsDiacritics | expected
-  ${"cba"}   | ${true}  | ${true}           | ${[]}
-  ${"cba"}   | ${true}  | ${false}          | ${[]}
-  ${"cba"}   | ${false} | ${true}           | ${[]}
-  ${"cba"}   | ${false} | ${false}          | ${[]}
-  ${"cbá"}   | ${true}  | ${true}           | ${["cba"]}
-  ${"cbá"}   | ${true}  | ${false}          | ${[]}
-  ${"cbá"}   | ${false} | ${true}           | ${["cba"]}
-  ${"cbá"}   | ${false} | ${false}          | ${[]}
-  ${"cba😆"} | ${true}  | ${true}           | ${["cba"]}
-  ${"cba😆"} | ${true}  | ${false}          | ${["cba"]}
-  ${"cba😆"} | ${false} | ${true}           | ${[]}
-  ${"cba😆"} | ${false} | ${false}          | ${[]}
-  ${"cbá😆"} | ${true}  | ${true}           | ${["cba"]}
-  ${"cbá😆"} | ${true}  | ${false}          | ${["cbá"]}
-  ${"cbá😆"} | ${false} | ${true}           | ${["cba😆"]}
-  ${"cbá😆"} | ${false} | ${false}          | ${[]}
-`("synonymAliases", ({ value, emoji, accentsDiacritics, expected }) => {
-  test(`${value} (emoji: ${emoji}, accentsDiacritics: ${accentsDiacritics})`, () => {
-    expect(synonymAliases(value, { emoji, accentsDiacritics })).toStrictEqual(
+  value      | emoji    | accentsDiacritics | suffix       | expected
+  ${"cba"}   | ${true}  | ${true}           | ${undefined} | ${[]}
+  ${"cba"}   | ${true}  | ${false}          | ${undefined} | ${[]}
+  ${"cba"}   | ${false} | ${true}           | ${undefined} | ${[]}
+  ${"cba"}   | ${false} | ${false}          | ${undefined} | ${[]}
+  ${"cbá"}   | ${true}  | ${true}           | ${undefined} | ${["cba"]}
+  ${"cbá"}   | ${true}  | ${false}          | ${undefined} | ${[]}
+  ${"cbá"}   | ${false} | ${true}           | ${undefined} | ${["cba"]}
+  ${"cbá"}   | ${false} | ${false}          | ${undefined} | ${[]}
+  ${"cba😆"} | ${true}  | ${true}           | ${undefined} | ${["cba"]}
+  ${"cba😆"} | ${true}  | ${false}          | ${undefined} | ${["cba"]}
+  ${"cba😆"} | ${false} | ${true}           | ${undefined} | ${[]}
+  ${"cba😆"} | ${false} | ${false}          | ${undefined} | ${[]}
+  ${"cbá😆"} | ${true}  | ${true}           | ${undefined} | ${["cba"]}
+  ${"cbá😆"} | ${true}  | ${false}          | ${undefined} | ${["cbá"]}
+  ${"cbá😆"} | ${false} | ${true}           | ${undefined} | ${["cba😆"]}
+  ${"cbá😆"} | ${false} | ${false}          | ${undefined} | ${[]}
+  ${"cba"}   | ${true}  | ${true}           | ${"s"}       | ${["cbas"]}
+  ${"cba"}   | ${true}  | ${false}          | ${"s"}       | ${["cbas"]}
+  ${"cba"}   | ${false} | ${true}           | ${"s"}       | ${["cbas"]}
+  ${"cba"}   | ${false} | ${false}          | ${"s"}       | ${["cbas"]}
+  ${"cbá"}   | ${true}  | ${true}           | ${"s"}       | ${["cbas"]}
+  ${"cbá"}   | ${true}  | ${false}          | ${"s"}       | ${["cbás"]}
+  ${"cbá"}   | ${false} | ${true}           | ${"s"}       | ${["cbas"]}
+  ${"cbá"}   | ${false} | ${false}          | ${"s"}       | ${["cbás"]}
+  ${"cba😆"} | ${true}  | ${true}           | ${"s"}       | ${["cbas"]}
+  ${"cba😆"} | ${true}  | ${false}          | ${"s"}       | ${["cbas"]}
+  ${"cba😆"} | ${false} | ${true}           | ${"s"}       | ${["cba😆s"]}
+  ${"cba😆"} | ${false} | ${false}          | ${"s"}       | ${["cba😆s"]}
+  ${"cbá😆"} | ${true}  | ${true}           | ${"s"}       | ${["cbas"]}
+  ${"cbá😆"} | ${true}  | ${false}          | ${"s"}       | ${["cbás"]}
+  ${"cbá😆"} | ${false} | ${true}           | ${"s"}       | ${["cba😆s"]}
+  ${"cbá😆"} | ${false} | ${false}          | ${"s"}       | ${["cbá😆s"]}
+`("synonymAliases", ({ value, emoji, accentsDiacritics, expected, suffix }) => {
+  test(`${value} (emoji: ${emoji}, accentsDiacritics: ${accentsDiacritics}, suffix: ${suffix})`, () => {
+    expect(synonymAliases(value, { emoji, accentsDiacritics, suffix })).toStrictEqual(
       expected
     );
   });
@@ -267,5 +286,35 @@ describe.each<{ tokens: string[]; expected: string[] }>`
 `("joinNumberWithSymbol", ({ tokens, expected }) => {
   test(`joinNumberWithSymbol(${tokens}) = ${expected}`, () => {
     expect(joinNumberWithSymbol(tokens)).toStrictEqual(expected);
+  });
+});
+
+describe.each<{ text: string; expected: string[] }>`
+  text         | expected
+  ${""}        | ${[]}
+  ${"a"}       | ${["a"]}
+  ${"a\n"}     | ${["a"]}
+  ${"\nb"}     | ${["b"]}
+  ${"a\nb"}    | ${["a", "b"]}
+  ${"a\n \nb"} | ${["a", " ", "b"]}
+`("smartLineBreakSplit", ({ text, expected }) => {
+  test(`smartLineBreakSplit(${text}) = ${expected}`, () => {
+    expect(smartLineBreakSplit(text)).toEqual(expected);
+  });
+});
+
+describe.each<{ lines: string[]; expected: string }>`
+lines                | expected
+  ${[]}              | ${""}
+  ${[""]}            | ${""}
+  ${["a"]}           | ${"a"}
+  ${["a", ""]}       | ${"a"}
+  ${["", "b"]}       | ${"b"}
+  ${["a", "b"]}      | ${"a\nb"}
+  ${["a", "", "b"]}  | ${"a\nb"}
+  ${["a", " ", "b"]} | ${"a\n \nb"}
+`("smartLineBreakJoin", ({ lines, expected }) => {
+  test(`smartLineBreakJoin(${lines}) = ${expected}`, () => {
+    expect(smartLineBreakJoin(lines)).toEqual(expected);
   });
 });

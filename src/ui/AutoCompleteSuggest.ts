@@ -639,6 +639,8 @@ export class AutoCompleteSuggest
         this.settings.treatAccentDiacriticsAsAlphabeticCharacters,
       frontMatterKeyForExclusion:
         this.settings.frontMatterKeyForExclusionInternalLink,
+      suffixesToAccept:
+        this.settings.suffixesToAcceptForInternalLinks,
     });
 
     this.statusBar.setInternalLinkIndexed(
@@ -974,8 +976,9 @@ export class AutoCompleteSuggest
   }
 
   constructInternalLinkText(word: InternalLinkWord): string {
-    // With aliases
-    if (this.settings.suggestInternalLinkWithAlias && word.aliasMeta) {
+    // With aliases or link suffixes
+    const suffixesActive = this.settings.suffixesToAcceptForInternalLinks.length > 1;
+    if ((this.settings.suggestInternalLinkWithAlias || suffixesActive) && word.aliasMeta) {
       const { link } = this.appHelper.optimizeMarkdownLinkText(
         word.aliasMeta.origin
       )!;
